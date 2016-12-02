@@ -1,0 +1,66 @@
+heat_template_version: 2015-10-15
+
+description: >
+  Install extra puppet modules from Red Hat Satellite server pre-configuraition
+  Your environment file need to look like:
+    parameter_defaults:
+      ExtraPuppetModulesFromSatellite:
+        server: satellite.example.com
+        protocol: https
+        organization: Org
+        environment: Production
+        content_view: OSP
+        modules:
+          - puppetlabs-motd
+          - saz-rsyslog
+ 
+parameters:
+
+  server:
+    type: string
+  ExtraPuppetModulesFromSatellite:
+    type: json
+    description: >
+      A json document specifying, server, protocol,
+      ssl-key, ssl-cert, organization, environment, content view
+      and a list of modules to install.
+
+        Example:   
+      
+                 ExtraPuppetModulesFromSatellite:
+                   server: satellite.example.com
+                   protocol: https
+                   organization: Org
+                   environment: Production
+                   content_view: OSP
+                   modules:
+                     - puppetlabs-motd
+                     - saz-rsyslog
+
+resources:
+
+  ExtraPuppetModulesFromSatelliteConfig:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config: 
+        get_file: /home/stack/templates/extraconfig/pre_deploy/extra-puppet-modules-from-satellite/scripts/extra-puppet-modules-from-satellite.py
+      inputs: 
+        - name: EXTRA_PUPPET_MODULES_SAT
+          type: Json
+
+  ExtraPuppetModulesFromSatelliteDeployment:
+    type: OS::Heat::SoftwareDeployment
+    properties:
+      name: ExtraPuppetModulesFromSatelliteDeployment
+      server: {get_param: server}
+      config: {get_resource: ExtraPuppetModulesFromSatelliteConfig}
+      input_values:
+        EXTRA_PUPPET_MODULES_SAT: {get_param: ExtraPuppetModulesFromSatellite}
+      actions: ['CREATE', 'UPDATE']
+
+outputs:
+  deploy_stdout:
+    description: Deployment reference, used to trigger puppet apply on changes
+    value: {get_attr: [ExtraPuppetModulesFromSatelliteDeployment, deploy_stdout]}
+
